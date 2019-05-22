@@ -34,8 +34,9 @@ class TextReader():
 			parts    = line.strip().split(b" +++$+++ ")
 			dialogue = parts[-1]
 
-			self.dialogues = [[]] + self.dialogues
-
-			for s in dialogues:
+			self.dialogues.append([])
+			for s in dialogue.split(','):
 				s = re.sub(r'[^\w\s]','',s).strip()
-				self.dialogues[0].append(s)
+				index = self.index_to_num(s)
+				self.dialogues[-1].append(index)
+

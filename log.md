@@ -13,3 +13,8 @@ It's been 13 days since last time I did this!
 It's too late tonight and I finished the reader which can read line
 by line.
 read_dialogues not tested yet
+
+## May. 21st 2019
+Based on the tutorial from https://towardsdatascience.com/implementing-word2vec-in-pytorch-skip-gram-model-e6bae040d2fb, implemented a word2vec model based on skip-gram algorithm. Glad that I have learned this in CSE156. But I still have to follow the tutorial all the way... Wo hao cai a
+<TODO>: Notice that the strings read from movie_lines.txt are byte strings. Be sure to check this in the future.
+The training code hasn't been tested yet. After that we should be good to start implementing seq2seq model.
