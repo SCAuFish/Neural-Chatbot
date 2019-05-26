@@ -18,3 +18,11 @@ read_dialogues not tested yet
 Based on the tutorial from https://towardsdatascience.com/implementing-word2vec-in-pytorch-skip-gram-model-e6bae040d2fb, implemented a word2vec model based on skip-gram algorithm. Glad that I have learned this in CSE156. But I still have to follow the tutorial all the way... Wo hao cai a
 <TODO>: Notice that the strings read from movie_lines.txt are byte strings. Be sure to check this in the future.
 The training code hasn't been tested yet. After that we should be good to start implementing seq2seq model.
+
+## May. 25th 2019
+Spent a whole night on adjusting word2vec to make it work on cuda...
+But it now works! I couldn't make cuda10 compatible with torch so I have to install my 1070.
+What a world!
+Next we can start seq2seq finally. With the experiences, hopefully the debugging process may be much shorter.
+Notes:
+    requires_grad_() should be called after the tensor is transferred to cuda. Or else the new tensor does not have grad!
