@@ -26,3 +26,8 @@ What a world!
 Next we can start seq2seq finally. With the experiences, hopefully the debugging process may be much shorter.
 Notes:
     requires_grad_() should be called after the tensor is transferred to cuda. Or else the new tensor does not have grad!
+
+## May. 26th 2019
+So I have implemented seq2seq model based on the tutorial. However since I am using lstm with attentive reader, the implementation has been a little different from the tutorial.
+Especially the tutorial doesn't cover the case with multiple batches so I had to do bunch of experiments to make sure the dimensions match.
+At last it works. Next we should train word2vec to get the embeddings, then try training seq2seq model.

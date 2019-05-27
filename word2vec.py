@@ -2,7 +2,7 @@
 # Cheng Shen
 # May 21st 2019
 
-# Reference: 
+# Reference:
 # https://towardsdatascience.com/implementing-word2vec-in-pytorch-skip-gram-model-e6bae040d2fb
 
 import torch
@@ -11,8 +11,18 @@ import torch.nn.functional as F
 import numpy as np
 import re
 
+from data import TextReader
+
 EMBEDDING_DIM = 500
 WINDOW_SIZE   = 2   # The words in range (-WINDOW_SIZE, 0, WINDOW_SIZE) are included
+EOS           = b"*END*"
+START         = b"*START*"
+
+
+computing_device = torch.device("cpu")
+if torch.cuda.is_available():
+    print("Using CUDA")
+    computing_device = torch.device("cuda:1")  # CUDA device may be different
 
 class word2vec:
     def __init__(self):
@@ -23,7 +33,10 @@ class word2vec:
     def sentence_to_list(self, sentence):
         # Striping and splitting here
         sentence  = sentence.lower()
-        word_list = filter(None, re.split(b"[, .!?*~:\"-]+", sentence))
+        words     = re.split(b"[, .!?*~:\"-]+", sentence)
+        words.append(EOS)
+        words.insert(0, START)
+        word_list = filter(None, words)
 
         return word_list
 
@@ -36,6 +49,10 @@ class word2vec:
     def add_whole_corpus(self, reader):
         for index in reader.lines.keys():
             self.add_to_vocab(reader.lines[index])
+
+        # Add End-Of-String token
+        self.vocab.add(EOS)
+        self.vocab.add(START)
 
     def generate_indices(self):
         self.word2idx = {w:idx for (idx, w) in enumerate(self.vocab)}
@@ -65,10 +82,6 @@ class word2vec:
         return x
 
     def train(self, reader, epochs=100, learning_rate=0.001):
-        computing_device = torch.device("cpu")
-        if torch.cuda.is_available():
-            print("Using CUDA")
-            computing_device = torch.device("cuda:1")  # CUDA device may be different
         # w1 the matrix to transform one-hot word encoding to center vector
         # w2 are vertices for context words
         self.w1 = torch.randn(EMBEDDING_DIM, len(self.vocab)).float()
@@ -78,8 +91,12 @@ class word2vec:
 
         for epoch in range(epochs):
             loss_val = 0
+            trained_lines = 0
             for line_index in reader.lines.keys():
                 line = reader.lines[line_index]
+                trained_lines += 1
+                if trained_lines % 1000 == 0:
+                	print("Finish training {}%\r".format(trained_lines*100/len(reader.lines)))
 
                 for data, target in self.generate_pair(line):
                     # predicting context word given center word
@@ -95,7 +112,7 @@ class word2vec:
                     loss = F.nll_loss(log_softmax.view(1, -1), y_true)
                     loss_val += loss.data.item()
                     loss.backward()
-                    
+
                     with torch.no_grad():
                         self.w1 -= learning_rate * self.w1.grad
                         self.w2 -= learning_rate * self.w2.grad
@@ -118,3 +135,34 @@ class word2vec:
 
     def load_embedding(self, input_filename):
         self.embedding = torch.load(input_filename)
+
+    # The following three methods are for word2vec application
+    def indicesFromSentence(self, sentence):
+    	word_list = self.sentence_to_list(sentece)
+    	return [self.word2idx[word] for word in word_list]
+
+    def tensorFromSentence(self, sentence):
+    	indices = self.indicesFromSentence(sentence)
+    	indices = append(self.word2idx[EOS])
+    	return torch.tensor(indices, dtype = torch.long, device=computing_device).view(-1, 1)
+
+    def tensorsFromPair(self, pair):
+    	# Pair should be a tuple of sentence indices
+    	# Returning a pair of tensors for training
+    	input_tensor = self.tensorFromSentence(pair[0])
+    	target_tensor= self.tensorFromSentence(pair[1])
+    	return(input_tensor, target_tensor)
+
+
+if __name__ == '__main__':
+	reader = TextReader()
+	reader.read_line_dict()
+
+	model = word2vec()
+	model.add_whole_corpus(reader)
+	model.generate_indices()
+
+	print("Start training")
+	model.train(reader, epochs = 1)
+	model.merge_embeddings()
+	model.save_embedding("word_embedding")
