@@ -38,6 +38,8 @@ class word2vec:
         self.model.train(essays2, total_examples=self.model.corpus_count, epochs=5)
 
     def transform(self, sentence):
+        if type(sentence) == str:
+            sentence = sentence.split(" ")
         # sentene is a list of words
         result = []
         for word in sentence:

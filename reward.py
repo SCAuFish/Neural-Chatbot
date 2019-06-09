@@ -14,18 +14,16 @@ import torch.nn.functional as func
 import torch.nn.init as torch_init
 import torch.optim as optim
 from torch.nn.modules.loss import *
-from torch.nn.modules.loss import _WeightedLoss
 
 # Data utils and dataloader
 import torchvision
 from torchvision import transforms, utils
-from xray_dataloader import ChestXrayDataset, create_split_loaders
 
 import matplotlib.pyplot as plt
 import numpy as np
 import os
 
-MAX_TURNS = 15
+from chatbot import *
 
 class ChatbotWrapper(nn.Module):
 	def __init__(self, chatbot):
@@ -33,9 +31,8 @@ class ChatbotWrapper(nn.Module):
 		self.chatbot = chatbot
 
 	def forward(self, input_tensor):
-		# each input tensor contains only one step
-		turn_count = 0
-		agent1_records, agent2_records = self.chatbot(input_tensor)
+		# conversation generating process doesn't need probability
+		agent1_records, agent2_records = self.chatbot.generate_trajectory(input_tensor)
 
 		# reward functions implemented here
 		reward = self.get_reward(agent1_records, agent2_records)
@@ -54,13 +51,17 @@ class ChatbotWrapper(nn.Module):
 
 	def information_flow(self, agent1_records, agent2_records):
 		reward = 0
-		for i in range(len(agent1_records) + len(agent2_records)):
+		for i in range(len(agent1_records) + len(agent2_records)-1):
 			idx_1 = (i + 1) // 2
 			idx_2 = (i) // 2
-			h_1 = self.chatbot.encode(agent1_records[idx_1])
-			h_2 = self.chatbot.encode(agent2_records[idx_2])
+			# Using hidden output to represent the encoded information
+			_, (h_1, c_1) = self.chatbot.encode(agent1_records[idx_1])
+			_, (h_2, c_2) = self.chatbot.encode(agent2_records[idx_2])
 
-			reward += (-torch.log(h_1.dot(h_2)))
+			info_vector1 = h_1[0,0,:]
+			info_vector2 = h_2[0,0,:]
+			similarity = info_vector1.dot(info_vector2) / (info_vector1.norm() * info_vector2.norm())
+			reward += (-torch.log(torch.cos(similarity)))
 
 		return reward
 

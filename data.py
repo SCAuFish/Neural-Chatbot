@@ -2,7 +2,7 @@
 # This file contains method to read in lines from Cornell movie lines dataset
 # Cheng Shen May 9th 2019
 
-import re
+import re, random
 from word2vec import START, EOS
 
 class TextReader():
@@ -57,3 +57,19 @@ class TextReader():
 			output_file.write(new_line + "\n")
 
 		output_file.close()
+
+	def get_sentences_pairs(self, dialogue):
+		# taking in a list of integers, return a list of tuples of strings
+		result = []
+		for i in range(len(dialogue)-1):
+			sentence1 = self.lines[dialogue[i]]
+			sentence2 = self.lines[dialogue[i+1]]
+
+			result.append((sentence1, sentence2))
+
+		return result
+
+	def generate_sentence(self):
+		# randomly returning a sentence from the dict
+		index = random.sample(self.lines.keys(), 1)[0]   # retuning a list, so pick the first one
+		return self.lines[index]
