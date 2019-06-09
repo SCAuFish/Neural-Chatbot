@@ -29,29 +29,32 @@ MAX_LENGTH  = 600
 BATCH_SIZE  = 50
 
 class EncoderRNN(nn.Module):
-	def __init__(self, input_size=EMBEDDING_DIM, hidden_size=HIDDEN_SIZE):
+	def __init__(self, input_size=EMBEDDING_DIM, hidden_size=HIDDEN_SIZE, device=device, batch_size=BATCH_SIZE):
 		super(EncoderRNN, self).__init__()
+		self.device = device
 		self.hidden_size = hidden_size
+		self.batch_size = batch_size
 
 		self.lstm = \
-			nn.LSTM(input_size, hidden_size)
+			nn.LSTM(input_size, hidden_size).to(device)
 
 	def forward(self, input_tensor, hidden):
 		# input should be tensor processedby word2vec model
 		output, hidden = self.lstm(input_tensor, hidden)
 		return output, hidden
 
-	def initHidden(self, batch_size=BATCH_SIZE):
+	def initHidden(self):
 		# Using default initiliazation to zero, may be improvised in the future
 		# Returning both hidden state and cell state (what a lovely LSTM)
-		return (torch.zeros(1, batch_size, self.hidden_size), \
-			torch.zeros(1, batch_size, self.hidden_size))
+		return (torch.zeros(1, self.batch_size, self.hidden_size, device = self.device), \
+			torch.zeros(1, self.batch_size, self.hidden_size, device = self.device))
 
 class AttnDecoderRNN(nn.Module):
 	def __init__(self, hidden_size=HIDDEN_SIZE, 
-		output_size=EMBEDDING_DIM, dropout_p=0.1, max_length=MAX_LENGTH, batch_size=BATCH_SIZE):
+		output_size=EMBEDDING_DIM, dropout_p=0.1, max_length=MAX_LENGTH, batch_size=BATCH_SIZE, device=device):
 		# MAX_LENGTH is based on Cornell movie lines dataset, as could be seen in the notebook
 		super(AttnDecoderRNN, self).__init__()
+		self.device      = device
 		self.hidden_size = hidden_size
 		self.output_size = output_size
 		self.dropout_p   = dropout_p
@@ -59,11 +62,11 @@ class AttnDecoderRNN(nn.Module):
 		self.batch_size  = batch_size
 
 		# Take input and hidden
-		self.attn        = nn.Linear(self.hidden_size + self.output_size, self.max_length) 
-		self.attn_combine= nn.Linear(self.hidden_size + self.output_size, self.hidden_size)
-		self.dropout     = nn.Dropout(self.dropout_p)
-		self.lstm        = nn.LSTM(input_size=self.hidden_size, hidden_size=self.hidden_size)
-		self.out         = nn.Linear(self.hidden_size, self.output_size)
+		self.attn        = nn.Linear(self.hidden_size + self.output_size, self.max_length).to(device)
+		self.attn_combine= nn.Linear(self.hidden_size + self.output_size, self.hidden_size).to(device)
+		self.dropout     = nn.Dropout(self.dropout_p).to(device)
+		self.lstm        = nn.LSTM(input_size=self.hidden_size, hidden_size=self.hidden_size).to(device)
+		self.out         = nn.Linear(self.hidden_size, self.output_size).to(device)
 
 	def forward(self, input_tensor, hidden, encoder_outputs):
 		# input_tensor is output from word2vec of word embedding
@@ -76,7 +79,8 @@ class AttnDecoderRNN(nn.Module):
 		# encoder output, for each sequence, find a row combination
 		# The final dimension should be batch_size * 1 * feature_size
 		missed_seq_length = self.max_length - encoder_outputs.shape[0]
-		to_concatenate    = torch.zeros(missed_seq_length, self.batch_size, self.hidden_size)
+		to_concatenate    = torch.zeros(missed_seq_length, self.batch_size, self.hidden_size, device=self.device)
+		print((encoder_outputs.size(), to_concatenate.size()))
 		encoder_outputs_filled = torch.cat((encoder_outputs, to_concatenate), 0)
 		attn_applied = torch.bmm(attn_weights.transpose(0,1), encoder_outputs_filled.transpose(0,1))
 
@@ -92,6 +96,6 @@ class AttnDecoderRNN(nn.Module):
 
 	def initHidden(self):
 		# Using default initilization to zero, may be improvised in the future
-		return (torch.zeros(1, self.batch_size, self.hidden_size), \
-			torch.zeros(1, self.batch_size, self.hidden_size))
+		return (torch.zeros(1, self.batch_size, self.hidden_size, device=self.device), \
+			torch.zeros(1, self.batch_size, self.hidden_size, device=self.device))
 
